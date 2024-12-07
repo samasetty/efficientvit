@@ -18,8 +18,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 sys.path.append(ROOT_DIR)
 
-from efficientvit.models.efficientvit.sam import EfficientViTSamPredictor
-from efficientvit.sam_model_zoo import create_efficientvit_sam_model
+from segment_anything import sam_model_registry, SamPredictorx
 
 
 def bbox_xywh_to_xyxy(bbox: list[int]) -> list[int]:
@@ -44,7 +43,7 @@ def ann_to_mask(ann, h, w):
 def sync_output(world_size, output):
     return output
 
-def predict_mask_from_box(predictor: EfficientViTSamPredictor, bbox: np.ndarray) -> np.ndarray:
+def predict_mask_from_box(predictor: SamPredictor, bbox: np.ndarray) -> np.ndarray:
     masks, iou_predictions, _ = predictor.predict(
         point_coords=None,
         point_labels=None,
@@ -57,7 +56,7 @@ def predict_mask_from_box(predictor: EfficientViTSamPredictor, bbox: np.ndarray)
 
 
 def predict_mask_from_point(
-    predictor: EfficientViTSamPredictor, point_coords: np.ndarray, point_labels: np.ndarray
+    predictor: SamPredictor, point_coords: np.ndarray, point_labels: np.ndarray
 ) -> np.ndarray:
     masks, iou_predictions, _ = predictor.predict(
         point_coords=point_coords,
@@ -123,7 +122,7 @@ def collate_fn(batch):
 
 def run_box(efficientvit_sam, dataloader, local_rank):
     efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = EfficientViTSamPredictor(efficientvit_sam)
+    predictor = SamPredictor(efficientvit_sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -158,7 +157,7 @@ def run_box(efficientvit_sam, dataloader, local_rank):
 
 def run_point(efficientvit_sam, dataloader, num_click, local_rank):
     efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = EfficientViTSamPredictor(efficientvit_sam)
+    predictor = SamPredictor(efficientvit_sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -204,7 +203,7 @@ def run_point(efficientvit_sam, dataloader, num_click, local_rank):
 
 def run_box_from_detector(efficientvit_sam, dataloader, local_rank):
     efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = EfficientViTSamPredictor(efficientvit_sam)
+    predictor = SamPredictor(efficientvit_sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -257,7 +256,8 @@ if __name__ == "__main__":
     local_rank = 0
     torch.cuda.set_device(local_rank)
 
-    efficientvit_sam = create_efficientvit_sam_model(args.model, True, args.weight_url)
+    efficientvit_sam = sam_model_registry[args.model](checkpoint=args.checkpoint_path)
+    predictor = SamPredictor(sam)
 
     dataset = eval_dataset(
         args.dataset, args.image_root, args.prompt_type, args.annotation_json_file, args.source_json_file
