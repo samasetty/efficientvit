@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -196,7 +197,7 @@ def run_point(efficientvit_sam, dataloader, num_click, local_rank):
 
             output.append(result)
 
-    world_size = int(os.environ["WORLD_SIZE"])
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
     merged_outs = sync_output(world_size, output)
 
     return merged_outs
@@ -220,7 +221,7 @@ def run_box_from_detector(efficientvit_sam, dataloader, local_rank):
             det["segmentation"] = rle
         output += detections
 
-    world_size = int(os.environ["WORLD_SIZE"])
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
     merged_outs = sync_output(world_size, output)
 
     return merged_outs
@@ -237,6 +238,8 @@ def evaluate(results, prompt_type, dataset, annotation_json_file=None):
         elif dataset == "lvis":
             lvis_api = LVIS(annotation_json_file)
             evaluate_predictions_on_lvis(lvis_gt=lvis_api, lvis_results=results, iou_type=iou_type)
+        elif dataset == "bdd100k":
+            raise NotImplementedError()
     else:
         raise NotImplementedError()
 
@@ -247,14 +250,17 @@ if __name__ == "__main__":
     parser.add_argument("--weight_url", type=str, default=None)
     parser.add_argument("--prompt_type", type=str, default="point", choices=["point", "box", "box_from_detector"])
     parser.add_argument("--num_click", type=int, default=1)
-    parser.add_argument("--dataset", type=str, choices=["coco", "lvis"])
+    parser.add_argument("--dataset", type=str, choices=["coco", "lvis", "bdd100k"])
     parser.add_argument("--image_root", type=str)
     parser.add_argument("--annotation_json_file", type=str)
     parser.add_argument("--source_json_file", type=str, default=None)
     parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--measure_latency", action='store_true')
     args = parser.parse_args()
 
     local_rank = 0
+    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
+        local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
 
     efficientvit_sam = create_efficientvit_sam_model(args.model, True, args.weight_url)
@@ -264,9 +270,15 @@ if __name__ == "__main__":
     )
 
     sampler = None
+    if int(os.environ.get("WORLD_SIZE", 1)) > 1:
+        sampler = DistributedSampler(dataset)
+
     dataloader = DataLoader(
         dataset, batch_size=1, sampler=sampler, drop_last=False, num_workers=args.num_workers, collate_fn=collate_fn
     )
+    
+    if args.measure_latency:
+      start_time = time.time()
 
     if args.prompt_type == "point":
         results = run_point(efficientvit_sam, dataloader, args.num_click, local_rank)
@@ -279,3 +291,10 @@ if __name__ == "__main__":
 
     if local_rank == 0:
         evaluate(results, args.prompt_type, args.dataset, args.annotation_json_file)
+      
+    if args.measure_latency:
+      end_time = time.time()
+      time_taken = end_time - start_time
+      total_images = len(dataset)
+      throughput = total_images / time_taken
+      print(f"Total images: {total_images}, Latency: {time_taken}, Throughput: {throughput}")
