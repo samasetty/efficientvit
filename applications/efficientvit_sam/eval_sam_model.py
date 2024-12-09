@@ -121,9 +121,9 @@ def collate_fn(batch):
     return batch
 
 
-def run_box(efficientvit_sam, dataloader, local_rank):
-    efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = SamPredictor(efficientvit_sam)
+def run_box(sam, dataloader, local_rank):
+    sam = sam.cuda(local_rank).eval()
+    predictor = SamPredictor(sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -156,9 +156,9 @@ def run_box(efficientvit_sam, dataloader, local_rank):
     return merged_outs
 
 
-def run_point(efficientvit_sam, dataloader, num_click, local_rank):
-    efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = SamPredictor(efficientvit_sam)
+def run_point(sam, dataloader, num_click, local_rank):
+    sam = sam.cuda(local_rank).eval()
+    predictor = SamPredictor(sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -202,9 +202,9 @@ def run_point(efficientvit_sam, dataloader, num_click, local_rank):
     return merged_outs
 
 
-def run_box_from_detector(efficientvit_sam, dataloader, local_rank):
-    efficientvit_sam = efficientvit_sam.cuda(local_rank).eval()
-    predictor = SamPredictor(efficientvit_sam)
+def run_box_from_detector(sam, dataloader, local_rank):
+    sam = sam.cuda(local_rank).eval()
+    predictor = SamPredictor(sam)
 
     output = []
     for _, data in enumerate(tqdm(dataloader, disable=local_rank != 0)):
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
 
-    efficientvit_sam = sam_model_registry[args.model](checkpoint=args.checkpoint_path)
+    sam = sam_model_registry[args.model](checkpoint=args.checkpoint_path)
     predictor = SamPredictor(sam)
 
     dataset = eval_dataset(
@@ -281,11 +281,11 @@ if __name__ == "__main__":
       start_time = time.time()
 
     if args.prompt_type == "point":
-        results = run_point(efficientvit_sam, dataloader, args.num_click, local_rank)
+        results = run_point(sam, dataloader, args.num_click, local_rank)
     elif args.prompt_type == "box":
-        results = run_box(efficientvit_sam, dataloader, local_rank)
+        results = run_box(sam, dataloader, local_rank)
     elif args.prompt_type == "box_from_detector":
-        results = run_box_from_detector(efficientvit_sam, dataloader, local_rank)
+        results = run_box_from_detector(sam, dataloader, local_rank)
     else:
         raise NotImplementedError()
 

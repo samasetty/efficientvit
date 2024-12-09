@@ -127,13 +127,13 @@ def main():
     parser.add_argument("--weight_url", type=str, default=None)
     parser.add_argument("--multimask", action="store_true")
     parser.add_argument("--image_path", type=str, default="assets/fig/cat.jpg")
-    parser.add_argument("--output_path", type=str, default=".demo/efficientvit_sam_demo.png")
+    parser.add_argument("--output_path", type=str, default=".demo/sam_demo.png")
 
     parser.add_argument("--mode", type=str, default="all", choices=["point", "box", "all"])
     parser.add_argument("--point", type=str, default=None)
     parser.add_argument("--box", type=str, default=None)
 
-    # EfficientViTSamAutomaticMaskGenerator args
+    # SamAutomaticMaskGenerator args
     parser.add_argument("--pred_iou_thresh", type=float, default=0.8)
     parser.add_argument("--stability_score_thresh", type=float, default=0.85)
     parser.add_argument("--min_mask_region_area", type=float, default=100)
