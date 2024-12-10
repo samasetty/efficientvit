@@ -19,7 +19,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 sys.path.append(ROOT_DIR)
 
-from segment_anything import sam_model_registry, SamPredictorx
+from segment_anything import sam_model_registry, SamPredictor
 
 
 def bbox_xywh_to_xyxy(bbox: list[int]) -> list[int]:
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
 
-    sam = sam_model_registry[args.model](checkpoint=args.checkpoint_path)
+    sam = sam_model_registry[args.model](checkpoint=args.weight_url)
     predictor = SamPredictor(sam)
 
     dataset = eval_dataset(

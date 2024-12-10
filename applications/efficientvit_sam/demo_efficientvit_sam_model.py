@@ -53,9 +53,14 @@ def show_anns(anns) -> None:
 
     img = np.ones((sorted_anns[0]["segmentation"].shape[0], sorted_anns[0]["segmentation"].shape[1], 4))
     img[:, :, 3] = 0
+
+    if color_palette is None:
+        color_palette = plt.cm.get_cmap("tab20", len(anns))
+        
     for ann in sorted_anns:
         m = ann["segmentation"]
-        color_mask = np.concatenate([np.random.random(3), [0.35]])
+        color = color_palette[ann['image_id']]  # Assign color based on object ID
+        color_mask = np.concatenate([color, [0.35]])
         img[m] = color_mask
     ax.imshow(img)
 
