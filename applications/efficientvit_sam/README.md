@@ -1,25 +1,33 @@
 # Run Benchmarks on BDD100K Dataset
 
 ## Setup
-The BDD100K dataset is a large-scale dataset for driving video analysis. Follow these steps to evaluate EfficientViT-SAM for segmentation tasks on BDD100K, or run our code on this <colab notebook>.
+
+The BDD100K dataset is a large-scale dataset for driving video analysis. Follow these steps to evaluate EfficientViT-SAM for segmentation tasks on BDD100K.
+
+### Prerequisites
+
+Install the necessary libraries with the following commands:
+
+```bash
+pip install bdd100k
+pip install pydantic==1.10.12
+```
 
 ### Steps to Prepare BDD100K Dataset
-1. Download all the images from the **train**, **validation**, and **test** splits of the BDD100K dataset <hyperlink>.
+1. [Download all the images](https://dl.cv.ethz.ch/bdd100k/data/) from the **train**, **validation**, and **test** splits of the BDD100K dataset.
 2. Combine all images into a single folder located at:
  ```bash
- ~/dataset/bdd100k/images/10k/all
+ ${efficientvit_repo}/assets/datasets/bdd100k/images/10k/all
 ```
-This folder should contain all the 10K images from the dataset.
 3. Download and Format Annotations
-* Download the file bdd100k_ins_seg_labels_trainval.zip from the BDD100K website and extract it.
+* Download the file `bdd100k_ins_seg_labels_trainval.zip` from the BDD100K website and extract it.
 * Run the following command to convert the annotation file into COCO-style format:
 
 ```bash
 python3 -m bdd100k.label.to_coco -m ins_seg \
-    ${in_path} -o ${~/bdd100k_coco_all}
+    ${in_path} -o ${efficientvit_repo}/assets/datasets/bdd100k/annotations/bdd100k_coco_all.json
 ```
-Download the file bdd100k_ins_seg_labels_trainval.zip from the BDD100K website and extract it.
-4. Place the generated COCO-style annotation file (bdd100k_coco_all.json) in the appropriate directory for evaluation.
+Place the generated COCO-style annotation file (`bdd100k_coco_all.json`) in the appropriate directory for evaluation.
 
 Expected directory structure:
 ```bash
@@ -31,7 +39,7 @@ bdd100k
 │   ├── bdd100k_coco_all.json
 ```
 
-## Pretrained EfficientViT-SAM Models
+### Pretrained EfficientViT-SAM Models
 
 Latency/Throughput is measured on NVIDIA Jetson AGX Orin, and NVIDIA A100 GPU with TensorRT, fp16. Data transfer time is included. Please put the downloaded checkpoints under *${efficientvit_repo}/assets/checkpoints/efficientvit_sam/*
 
@@ -47,6 +55,10 @@ Latency/Throughput is measured on NVIDIA Jetson AGX Orin, and NVIDIA A100 GPU wi
 <b> Table1: Summary of All EfficientViT-SAM Variants.</b> COCO mAP and LVIS mAP are measured using ViTDet's predicted bounding boxes as the prompt. End-to-end Jetson Orin latency and A100 throughput are measured with TensorRT and fp16.
 </p>
 
+### Pretrained SAM Models
+
+[Follow these instructions](<https://github.com/facebookresearch/segment-anything?tab=readme-ov-file#model-checkpoints>) to download the SAM model checkpoints, and place them under *${efficientvit_repo}/assets/checkpoints/sam/*. Our results were obtained with the SAM-ViT-H model.
+
 ## Benchmarking EfficientViT-SAM on BDD100K
 To measure the latency of EfficientViT-SAM on the BDD100K dataset, use the commands below. Ensure the `--measure_latency` flag is specified to get latency results for each model variant.
 * EfficientViT-SAM
@@ -55,41 +67,41 @@ python /root/efficientvit/applications/efficientvit_sam/eval_efficientvit_sam_mo
     --model ${model} \
     --prompt_type box \
     --dataset bdd100k \
-    --image_root /content/drive/MyDrive/bdd100k_train/images/10k/all \
-    --annotation_json_file ~/ins_seg_val_cocofmt.json \
+    --image_root ${efficientvit_repo}/assets/datasets/bdd100k/images/10k/all \
+    --annotation_json_file ${efficientvit_repo}/assets/datasets/bdd100k/annotations/bdd100k_coco_all.json \
     --weight_url assets/checkpoints/efficientvit_sam/{model_weights} \
     --measure_latency
 ```
 
-# expected results: 
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.478
-```
-
+* SAM
 ```bash
-# LVIS
-torchrun --nproc_per_node=8 applications/efficientvit_sam/eval_efficientvit_sam_model.py --dataset lvis --image_root ~/dataset/coco --annotation_json_file ~/dataset/coco/annotations/lvis_v1_val.json --model efficientvit-sam-xl1 --prompt_type box_from_detector --source_json_file ~/dataset/coco/source_json_file/lvis_vitdet.json
-
-# expected results: 
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=300 catIds=all] = 0.444
+python /root/efficientvit/applications/efficientvit_sam/eval_sam_model.py \
+    --model ${model} \
+    --prompt_type box \
+    --dataset bdd100k \
+    --image_root ${efficientvit_repo}/assets/datasets/bdd100k/images/10k/all \
+    --annotation_json_file ${efficientvit_repo}/assets/datasets/bdd100k/annotations/bdd100k_coco_all.json \
+    --weight_url assets/checkpoints/sam/{model_weights} \
+    --measure_latency
 ```
+
+## Expected Results: 
+
+### Table: Performance Comparison of EfficientViT-SAM Variants and the Original SAM Model on the BDD100K Dataset
+
+| Model                  | mIoU (All) | mIoU (Small) | mIoU (Medium) | mIoU (Large) | Latency (ms) | Throughput (images/s) |
+|------------------------|------------|--------------|---------------|--------------|--------------|-----------------------|
+| SAM-ViT-H             | 41.233     | 42.985       | 40.668        | 36.026       | 4445.94      | 2.26                  |
+| EfficientViT-SAM-L0   | 52.696     | 57.938       | 49.920        | 39.384       | 527.97       | 19.04                 |
+| EfficientViT-SAM-L1   | 52.755     | 57.903       | 50.127        | 39.480       | 540.31       | 18.60                 |
+| EfficientViT-SAM-L2   | 52.916     | 57.814       | 50.142        | 40.860       | 586.49       | 17.14                 |
+| EfficientViT-SAM-XL0  | 49.148     | 53.594       | 45.746        | 40.080       | 622.94       | 16.13                 |
+| EfficientViT-SAM-XL1  | 48.927     | 52.871       | 45.830        | 41.050       | 735.36       | 13.67                 |
+
 
 ## Visualization
 
-Please run [demo_efficientvit_sam_model.py](demo_efficientvit_sam_model.py) to visualize our segment anything models.
-
-Example:
-
-```bash
-# segment everything
-python applications/efficientvit_sam/demo_efficientvit_sam_model.py --model efficientvit-sam-xl1 --mode all
-
-# prompt with points
-python applications/efficientvit_sam/demo_efficientvit_sam_model.py --model efficientvit-sam-xl1 --mode point
-
-# prompt with box
-python applications/efficientvit_sam/demo_efficientvit_sam_model.py --model efficientvit-sam-xl1 --mode box --box "[150,70,640,400]"
-
-```
+<insert info here>
 
 ## Reference
 
