@@ -100,8 +100,7 @@ python /root/efficientvit/applications/efficientvit_sam/eval_sam_model.py \
 
 
 ## Visualization
-
-<insert info here>
+The scripts we used to generate demo videos for EfficientViT-SAM and SAM on the BDD100K dataset are available in this [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1F5d_fRJu8v-aIQMJYC5v7R616woqvgn5?usp=sharing) notebook. The generated demo videos showcasing EfficientViT-SAM and SAM can be viewed [here](https://drive.google.com/drive/folders/1_LGqplLApgzD2mTX7z3FHZLy96hmy4-B?usp=sharing).
 
 ## Reference
 
